@@ -1,0 +1,252 @@
+import { useState } from "react";
+
+const WARMUP_SETS = [
+  { label: "Set 1", pct: 0.50, reps: 5, note: "50%" },
+  { label: "Set 2", pct: 0.75, reps: 3, note: "75%" },
+];
+
+const BAR_WEIGHT = 45;
+const PLATES = [45, 35, 25, 10, 5, 2.5];
+
+function roundToPlate(weight) {
+  // round to nearest 5 lb increment (both sides = 2.5 increments)
+  return Math.round(weight / 5) * 5;
+}
+
+function getPlatesPerSide(totalWeight, barWeight) {
+  let remaining = (totalWeight - barWeight) / 2;
+  if (remaining <= 0) return [];
+  const result = [];
+  for (const p of PLATES) {
+    while (remaining >= p - 0.01) {
+      result.push(p);
+      remaining -= p;
+      remaining = Math.round(remaining * 100) / 100;
+    }
+  }
+  return result;
+}
+
+function PlateVisual({ plates }) {
+  const colors = {
+    45: "#e63946", 35: "#457b9d", 25: "#f4a261",
+    10: "#2a9d8f", 5: "#8338ec", 2.5: "#aaa"
+  };
+  const heights = { 45: 44, 35: 38, 25: 32, 10: 22, 5: 18, 2.5: 14 };
+  if (!plates.length) return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <div style={{ width: 80, height: 10, background: "#555", borderRadius: 4 }} />
+      <span style={{ fontSize: 11, color: "#888", fontFamily: "monospace" }}>bar only</span>
+    </div>
+  );
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+      <div style={{ width: 70, height: 10, background: "#777", borderRadius: 4 }} />
+      {plates.map((p, i) => (
+        <div key={i} style={{
+          width: 14,
+          height: heights[p] || 20,
+          background: colors[p] || "#999",
+          borderRadius: 3,
+          border: "1.5px solid rgba(255,255,255,0.15)",
+          boxShadow: "inset 0 1px 2px rgba(255,255,255,0.2)"
+        }} />
+      ))}
+    </div>
+  );
+}
+
+export default function WarmupCalc() {
+  const [workingWeight, setWorkingWeight] = useState("");
+  const [unit, setUnit] = useState("lbs");
+  const [barIncluded, setBarIncluded] = useState(true);
+
+  const bar = barIncluded ? (unit === "lbs" ? BAR_WEIGHT : 20) : 0;
+  const ww = parseFloat(workingWeight) || 0;
+
+  const sets = WARMUP_SETS.map((s, i) => {
+    let raw = i === 0 ? bar : roundToPlate(ww * s.pct);
+    raw = Math.max(raw, bar);
+    const plates = getPlatesPerSide(raw, bar);
+    return { ...s, weight: raw, plates };
+  });
+
+  const allDone = ww > 0;
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "#0d0d0f",
+      color: "#f0ede8",
+      fontFamily: "'Courier New', monospace",
+      padding: "2rem 1.5rem",
+      maxWidth: 560,
+      margin: "0 auto"
+    }}>
+      {/* Header */}
+      <div style={{ marginBottom: "2rem" }}>
+        <div style={{ fontSize: 11, letterSpacing: 4, color: "#666", textTransform: "uppercase", marginBottom: 6 }}>
+          Warmup Protocol
+        </div>
+        <h1 style={{
+          fontSize: "clamp(28px, 8vw, 42px)",
+          fontWeight: 900,
+          margin: 0,
+          fontFamily: "'Georgia', serif",
+          letterSpacing: -1,
+          lineHeight: 1
+        }}>
+          RAMP UP<br />
+          <span style={{ color: "#e63946" }}>CALCULATOR</span>
+        </h1>
+      </div>
+
+      {/* Input */}
+      <div style={{
+        background: "#18181b",
+        border: "1px solid #2a2a2e",
+        borderRadius: 12,
+        padding: "1.25rem",
+        marginBottom: "1.5rem"
+      }}>
+        <label style={{ fontSize: 11, letterSpacing: 3, color: "#888", display: "block", marginBottom: 10 }}>
+          WORKING / HEAVY SET WEIGHT
+        </label>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <input
+            type="number"
+            value={workingWeight}
+            onChange={e => setWorkingWeight(e.target.value)}
+            placeholder="e.g. 225"
+            style={{
+              flex: 1,
+              background: "#0d0d0f",
+              border: "2px solid #333",
+              borderRadius: 8,
+              padding: "0.75rem 1rem",
+              color: "#f0ede8",
+              fontSize: 24,
+              fontWeight: 700,
+              fontFamily: "'Courier New', monospace",
+              outline: "none",
+              transition: "border-color 0.2s"
+            }}
+            onFocus={e => e.target.style.borderColor = "#e63946"}
+            onBlur={e => e.target.style.borderColor = "#333"}
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {["lbs", "kg"].map(u => (
+              <button key={u} onClick={() => setUnit(u)} style={{
+                background: unit === u ? "#e63946" : "#222",
+                border: "none", borderRadius: 6,
+                padding: "0.35rem 0.7rem",
+                color: unit === u ? "#fff" : "#888",
+                fontSize: 12, fontWeight: 700,
+                cursor: "pointer", letterSpacing: 1,
+                transition: "all 0.15s"
+              }}>{u.toUpperCase()}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
+          <div
+            onClick={() => setBarIncluded(!barIncluded)}
+            style={{
+              width: 36, height: 20, borderRadius: 10,
+              background: barIncluded ? "#e63946" : "#333",
+              cursor: "pointer", transition: "background 0.2s",
+              position: "relative"
+            }}
+          >
+            <div style={{
+              position: "absolute", top: 3, left: barIncluded ? 18 : 3,
+              width: 14, height: 14, borderRadius: "50%", background: "#fff",
+              transition: "left 0.2s"
+            }} />
+          </div>
+          <span style={{ fontSize: 12, color: "#888" }}>
+            Include bar weight ({unit === "lbs" ? "45 lbs" : "20 kg"})
+          </span>
+        </div>
+      </div>
+
+      {/* Warmup Sets */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {sets.map((s, i) => (
+          <div key={i} style={{
+            background: "#18181b",
+            border: `1px solid ${allDone ? "#2a2a2e" : "#1e1e21"}`,
+            borderLeft: `3px solid ${i === 0 ? "#666" : `hsl(${5 - i * 0.5},70%,${45 + i * 3}%)`}`,
+            borderRadius: 10,
+            padding: "0.9rem 1rem",
+            opacity: allDone ? 1 : 0.4,
+            transition: "opacity 0.3s"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div>
+                <span style={{ fontSize: 11, color: "#666", letterSpacing: 2 }}>{s.note.toUpperCase()} — </span>
+                <span style={{ fontSize: 11, color: "#888" }}>{s.reps} reps</span>
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#f0ede8" }}>
+                {allDone ? s.weight : "—"} <span style={{ fontSize: 12, color: "#666" }}>{unit}</span>
+              </div>
+            </div>
+
+            {/* Plate visual */}
+            {allDone && (
+              <div style={{ marginTop: 4 }}>
+                <PlateVisual plates={s.plates} />
+                {s.plates.length > 0 && (
+                  <div style={{ fontSize: 10, color: "#555", marginTop: 4 }}>
+                    Each side: {s.plates.join(" + ")} {unit}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Working Set */}
+        {allDone && (
+          <div style={{
+            background: "#1a0a0c",
+            border: "2px solid #e63946",
+            borderRadius: 10,
+            padding: "1rem",
+            marginTop: 4
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 11, color: "#e63946", letterSpacing: 3 }}>WORKING WEIGHT</div>
+                <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>100% — Your heavy set</div>
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: "#e63946" }}>
+                {ww} <span style={{ fontSize: 13 }}>{unit}</span>
+              </div>
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <PlateVisual plates={getPlatesPerSide(ww, bar)} />
+              {getPlatesPerSide(ww, bar).length > 0 && (
+                <div style={{ fontSize: 10, color: "#773", marginTop: 4 }}>
+                  Each side: {getPlatesPerSide(ww, bar).join(" + ")} {unit}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {!allDone && (
+        <div style={{ textAlign: "center", marginTop: 40, color: "#444", fontSize: 13, letterSpacing: 1 }}>
+          ENTER YOUR WORKING WEIGHT ABOVE ↑
+        </div>
+      )}
+
+      <div style={{ marginTop: 32, fontSize: 10, color: "#333", letterSpacing: 1, lineHeight: 1.8 }}>
+        PROTOCOL: 50% → 75% → 100%<br />
+        Weights rounded to nearest 5 {unit} (2.5 per side)
+      </div>
+    </div>
+  );
+}
